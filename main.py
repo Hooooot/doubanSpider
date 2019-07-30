@@ -1,12 +1,11 @@
 import sys
 import time
 
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QIntValidator, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
-                             QDialog, QGridLayout, QLabel, QLineEdit,
-                             QMainWindow, QMenu, QMenuBar, QPushButton,
-                             QTableView, QWidget)
+from PyQt5.QtWidgets import (
+    QAction, QApplication, QCheckBox, QComboBox, QDialog, QGridLayout, QLabel,
+    QLineEdit, QMainWindow, QMessageBox, QPushButton, QTableView, QWidget)
 
 from distribution import Distribution
 from douban import Movie, Spider
@@ -156,6 +155,14 @@ class MainWindow(QMainWindow):
         self.menu = self.menuBar()
         # 是否使用多线（进）程
         self.concurrent = False
+        # 已用时秒
+        self.usedTimeS = 0
+        # 已用时分
+        self.usedTimeM = 0
+        # 已用时Label
+        self.timeLabel = None
+        # 计时器
+        self.timer = None
         # 年代显示与爬虫请求参数的映射
         self.yearsDic = {
             "全部年代": "",
@@ -226,6 +233,12 @@ class MainWindow(QMainWindow):
         self.status.messageChanged.emit("就绪!")
         self.centralWidget().setLayout(gridLayout)
 
+        self.timeLabel = QLabel("尚未开始！")
+        self.status.addPermanentWidget(self.timeLabel)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.updateUsedTime)
+
     def btnClicked(self):
         """
         #### 功能：响应开始按钮的点击事件
@@ -237,6 +250,9 @@ class MainWindow(QMainWindow):
             """
             点击开始，获取条件，并运行爬虫
             """
+            if self.amount.text() == '':
+                QMessageBox.warning(self, "警告：", "数量不能为空！", QMessageBox.Ok)
+                return
             sender.setText("停止")
             sender.setToolTip("点击停止爬取")
             self.amount.setReadOnly(True)
@@ -261,12 +277,14 @@ class MainWindow(QMainWindow):
             else:
                 params["countries"] = self.areaCombo.currentText()
             params["year_range"] = self.yearsDic[self.yearCombo.currentText()]
-            print(self.amount.text())
             self.spiderThread = SpiderThread(params, int(self.amount.text()),
                                              self.status.showMessage,
                                              self.threadFinish,
                                              self.concurrent)
             self.spiderThread.start()
+            self.usedTimeM = 0
+            self.usedTimeS = 0
+            self.timer.start(1000)
         else:
             """
             点击停止，终止爬虫进程
@@ -281,6 +299,7 @@ class MainWindow(QMainWindow):
             self.amount.setReadOnly(False)
             self.amount.setStyleSheet("QLineEdit{background-color: white;}")
             self.status.messageChanged.emit("就绪!")
+            self.timer.stop()
 
     def threadFinish(self, movieList):
         """
@@ -298,14 +317,50 @@ class MainWindow(QMainWindow):
         if self.showAllDataCheck.isChecked():
             self.tableWindow = TableWidget(movieList)
             self.tableWindow.show()
+        self.timer.stop()
+
+    def updateUsedTime(self):
+        """
+        #### 功能：计时器结束时的响应方法，用于更新状态栏的计时栏
+        #### 参数：None
+        #### 返回：None
+        """
+        self.usedTimeS += 1
+        if self.usedTimeS >= 60:
+            self.usedTimeM += 1
+            self.usedTimeS = 0
+        if self.usedTimeM == 0:
+            self.timeLabel.setText("已用时：" + str(self.usedTimeS) + " 秒")
+        else:
+            self.timeLabel.setText("已用时：" + str(self.usedTimeM) + " 分 " +
+                                   str(self.usedTimeS) + " 秒")
 
     def about(self):
+        """
+        #### 功能：打开关于窗口
+        #### 参数：None
+        #### 返回：None
+        """
         self.aboutWindow = About()
         self.aboutWindow.setModal(True)
         self.aboutWindow.show()
 
     def concurrentCheck(self, check):
-        self.concurrent = check
+        """
+        #### 功能：多线（进）程运行QAction的响应函数，用于设置是否使用并发
+        #### 参数：
+                 check:是否使用并发执行
+        #### 返回：None
+        """
+        sender = self.sender()
+        if check:
+            rs = QMessageBox().warning(self, "警告：",
+                                       "开启多线（进）程可能会导致程序不稳定！是否继续开启？",
+                                       QMessageBox.Yes | QMessageBox.No)
+            if rs == QMessageBox.Yes:
+                self.concurrent = check
+            else:
+                sender.setChecked(False)
 
 
 class About(QDialog):
@@ -323,13 +378,15 @@ class About(QDialog):
         tips = QLabel("说明：", self)
         tipsText = QLabel("&nbsp;&nbsp;&nbsp;多线（进）程运行可能会<br/>\
 &nbsp;导致程序不稳定，建议数据量<br/>&nbsp;不大时不要打开。", self)
-        edition = QLabel("版本：1.0.0 released 2019-7-29", self)
+        edition = QLabel("版本：1.1.0 released 2019-7-30", self)
         url = QLabel(self)
         url.setOpenExternalLinks(True)
-        url.setText("<a style='color:DeepSkyBlue;' href='https://github.com/Hooooot/doubanSpider'>项目地址</a>")
+        url.setText("<a style='color:DeepSkyBlue;' \
+href='https://github.com/Hooooot/doubanSpider'>项目地址</a>")
         GPLLicense = QLabel(self)
         GPLLicense.setOpenExternalLinks(True)
-        GPLLicense.setText("<a style='color:DeepSkyBlue;' href='https://github.com/Hooooot/doubanSpider/blob/master/LICENSE'>MIT许可证</a>")
+        GPLLicense.setText("<a style='color:DeepSkyBlue;' \
+href='https://github.com/Hooooot/doubanSpider/blob/master/LICENSE'>MIT许可证</a>")
         right = QLabel("Copyright (c) 2019 Hooooot", self)
 
         gridLayout.addWidget(tips, 1, 1)
@@ -338,7 +395,6 @@ class About(QDialog):
         gridLayout.addWidget(GPLLicense, 3, 2)
         gridLayout.addWidget(edition, 4, 1)
         gridLayout.addWidget(right, 5, 1)
-
         self.setLayout(gridLayout)
 
 

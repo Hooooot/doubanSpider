@@ -2,12 +2,12 @@ import pickle
 import sys
 import time
 
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QIntValidator, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
                              QGridLayout, QLabel, QLineEdit, QMainWindow,
                              QMenu, QMenuBar, QMessageBox, QPushButton,
-                             QTableView, QWidget, QDialog)
+                             QTableView, QWidget, QDialog, QProgressBar)
 
 from douban import Movie
 
@@ -16,6 +16,14 @@ def readData():
     with open("./jinwu/dump.dat", "rb") as f:
         movies = pickle.load(f)
     return movies
+
+
+class TimerThread(QThread):
+    def __init__(self, parent=None):
+        return super().__init__(parent=parent)
+
+    def run(self):
+        pass
 
 
 class TableWindow(QThread):
@@ -43,18 +51,12 @@ class MainWindow(QMainWindow):
         self.status = self.statusBar()
         self.menu = self.menuBar()
         self.aboutWindow = None
-        self.yearsDic = {
-            "全部年代": "",
-            "2019": "2019,2019",
-            "2018": "2018,2018",
-            "2010年代": "2010,2019",
-            "2000年代": "2000,2009",
-            "90年代": "1990,1999",
-            "80年代": "1980,1989",
-            "70年代": "1970,1979",
-            "60年代": "1960,1969",
-            "更早": "1,1959"
-        }
+        self.progress = None
+        self.usedTimeS = 0
+        self.usedTimeM = 0
+        self.timeLabel = None
+        self.timer = None
+
         self.initUI()
 
     def initUI(self):
@@ -108,15 +110,39 @@ class MainWindow(QMainWindow):
         self.status.messageChanged.emit("Ready!")
         self.centralWidget().setLayout(gridLayout)
 
+        # self.progress = QProgressBar(self)
+        # self.status.addPermanentWidget(self.progress, stretch=0)
+        self.timeLabel = QLabel("已用时：" + str(self.usedTimeS) + "秒")
+        self.status.addPermanentWidget(self.timeLabel)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.updateUsedTime)
+
+    def updateUsedTime(self):
+        self.usedTimeS += 1
+        if self.usedTimeS >= 60:
+            self.usedTimeM += 1
+            self.usedTimeS = 0
+        if self.usedTimeM == 0:
+            self.timeLabel.setText("已用时：" + str(self.usedTimeS) + " 秒")
+        else:
+            self.timeLabel.setText("已用时：" + str(self.usedTimeM) + " 分 " +
+                                   str(self.usedTimeS) + " 秒")
+
     def btnClicked(self):
         # moviesList = readData()
         # self.moviesTable(moviesList)
         # self.tableThread = TableWindow()
         # self.tableThread.start()
 
-        if self.showAllDataCheck.isChecked():
-            self.tableWindow = TableWidget(self)
+        if not self.showAllDataCheck.isChecked():
+            self.tableWindow = TableWidget()
             self.tableWindow.show()
+        self.status.showMessage("正在获取电影详细信息：（200/200）")
+        self.usedTimeM = 0
+        self.usedTimeS = 0
+        self.timer.start(1000)
+        self.showAllDataCheck.setCheckable(False)
 
     def about(self, qAction):
         self.aboutWindow = About()
@@ -189,10 +215,12 @@ class About(QDialog):
         edition = QLabel("版本：0.1.0", self)
         url = QLabel(self)
         url.setOpenExternalLinks(True)
-        url.setText("<a style='color:DeepSkyBlue;' href='https://github.com/Hooooot/doubanSpider'>项目地址</a>")
+        url.setText("<a style='color:DeepSkyBlue;' \
+href='https://github.com/Hooooot/doubanSpider'>项目地址</a>")
         GPLLicense = QLabel(self)
         GPLLicense.setOpenExternalLinks(True)
-        GPLLicense.setText("<a style='color:DeepSkyBlue;' href='https://github.com/Hooooot/doubanSpider/blob/master/LICENSE'>MIT许可证</a>")
+        GPLLicense.setText("<a style='color:DeepSkyBlue;' \
+href='https://github.com/Hooooot/doubanSpider/blob/master/LICENSE'>MIT许可证</a>")
         right = QLabel("Copyright (c) 2019 Hooooot", self)
 
         gridLayout.addWidget(edition, 1, 1)
@@ -201,7 +229,6 @@ class About(QDialog):
         gridLayout.addWidget(right, 4, 1)
 
         self.setLayout(gridLayout)
-
 
 
 if __name__ == "__main__":

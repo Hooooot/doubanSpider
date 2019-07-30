@@ -35,25 +35,30 @@ class Distribution():
                  movies:所有电影
         #### 返回：None
         """
-        maxVotes = max(movies, key=lambda m: m.votes)
-        maxStars = max(movies, key=lambda m: m.stars)
-        name = ["5星", "4星", "3星", "2星", "1星"]
-        x = np.arange(5)
-        plt.figure("豆瓣分析")
-        votes = plt.bar(x=x-0.2, height=maxVotes.rating, width=0.4,
-                        label=maxVotes.name+"(最多投票)")
-        stars = plt.bar(x=x+0.2, height=maxStars.rating, width=0.4,
-                        label=maxStars.name+"(最多评分)")
-        plt.xticks(x, name)
-        plt.ylim(0, 100)
-        for i in votes:
-            plt.text(x=i.get_x()+0.05, y=i.get_height()+1, s=i.get_height())
-        for i in stars:
-            plt.text(x=i.get_x()+0.05, y=i.get_height()+1, s=i.get_height())
-        plt.ylabel("投票占比（%）")
-        plt.legend()
-        plt.title("最多投票和最多评分的电影评价情况")
-        plt.show()
+        try:
+            maxVotes = max(movies, key=lambda m: m.votes)
+            maxStars = max(movies, key=lambda m: m.stars)
+            name = ["5星", "4星", "3星", "2星", "1星"]
+            x = np.arange(5)
+            plt.figure("豆瓣分析")
+            votes = plt.bar(x=x-0.2, height=maxVotes.rating, width=0.4,
+                            label=maxVotes.name+"(最多投票)")
+            stars = plt.bar(x=x+0.2, height=maxStars.rating, width=0.4,
+                            label=maxStars.name+"(最多评分)")
+            plt.xticks(x, name)
+            plt.ylim(0, 100)
+            for i in votes:
+                plt.text(x=i.get_x()+0.05, y=i.get_height()+1,
+                         s=i.get_height())
+            for i in stars:
+                plt.text(x=i.get_x()+0.05, y=i.get_height()+1,
+                         s=i.get_height())
+            plt.ylabel("投票占比（%）")
+            plt.legend()
+            plt.title("最多投票和最多评分的电影评价情况")
+            plt.show()
+        except Exception as e:
+            print("maxVotesAndMaxStarsDistribution：" + repr(e))
 
     @staticmethod
     def typesDistribution(movies):
@@ -87,26 +92,31 @@ class Distribution():
             "武侠": 0,
             "情色": 0
         }
-        for m in movies:
-            for t in m.types:
-                if t not in allTypesCount:
-                    continue
-                allTypesCount[t] += 1
-        lists = sorted(allTypesCount.items(), key=lambda x: x[1], reverse=True)
-        names = []
-        values = []
-        for i in lists[:5]:
-            names.append(i[0])
-            values.append(i[1])
-        plt.figure("豆瓣分析")
-        top5 = plt.bar(x=names, height=values, width=0.8)
-        for i in top5:
-            plt.text(x=i.get_x()+0.35, y=i.get_height()+0.1, s=i.get_height())
-        plt.title("最多类型Top 5")
-        plt.xlabel("电影类型")
-        plt.ylabel("电影数量（部）")
-        plt.ylim(0, len(movies))
-        plt.show()
+        try:
+            for m in movies:
+                for t in m.types:
+                    if t not in allTypesCount:
+                        continue
+                    allTypesCount[t] += 1
+            lists = sorted(allTypesCount.items(), key=lambda x: x[1],
+                           reverse=True)
+            names = []
+            values = []
+            for i in lists[:5]:
+                names.append(i[0])
+                values.append(i[1])
+            plt.figure("豆瓣分析")
+            top5 = plt.bar(x=names, height=values, width=0.8)
+            for i in top5:
+                plt.text(x=i.get_x()+0.35, y=i.get_height()+0.1,
+                         s=i.get_height())
+            plt.title("最多类型Top 5")
+            plt.xlabel("电影类型")
+            plt.ylabel("电影数量（部）")
+            plt.ylim(0, len(movies))
+            plt.show()
+        except Exception as e:
+            print("typesDistribution：" + repr(e))
 
     @staticmethod
     def yearsDestribution(movies):
@@ -116,21 +126,24 @@ class Distribution():
                  movies:所有电影
         #### 返回：None
         """
-        minYear = min(movies, key=lambda x: x.year).year
-        maxYear = max(movies, key=lambda x: x.year).year
-        yearsCount = {}
-        for i in movies:
-            if i.year not in yearsCount:
-                yearsCount[i.year] = 1
-            else:
-                yearsCount[i.year] += 1
-        yearslist = [i.year for i in movies]
-        plt.figure("豆瓣分析")
-        plt.title("各年份电影数量直方图")
-        plt.xlabel("电影年份（年）")
-        plt.ylabel("电影数量（部）")
-        plt.hist(x=yearslist, bins=maxYear-minYear+1, edgecolor="black")
-        plt.show()
+        try:
+            minYear = min(movies, key=lambda x: x.year).year
+            maxYear = max(movies, key=lambda x: x.year).year
+            yearsCount = {}
+            for i in movies:
+                if i.year not in yearsCount:
+                    yearsCount[i.year] = 1
+                else:
+                    yearsCount[i.year] += 1
+            yearslist = [i.year for i in movies]
+            plt.figure("豆瓣分析")
+            plt.title("各年份电影数量直方图")
+            plt.xlabel("电影年份（年）")
+            plt.ylabel("电影数量（部）")
+            plt.hist(x=yearslist, bins=maxYear-minYear+1, edgecolor="black")
+            plt.show()
+        except Exception as e:
+            print("yearsDestribution：" + repr(e))
 
     @staticmethod
     def areasDestribution(movies):
@@ -163,30 +176,35 @@ class Distribution():
             "巴西": 0,
             "丹麦": 0
             }
-        for m in movies:
-            for t in m.areas:
-                if t not in areasCount:
-                    if t == "US":
-                        areasCount["美国"] += 1
-                    elif t == "UK":
-                        areasCount["英国"] += 1
+        try:
+            for m in movies:
+                for t in m.areas:
+                    if t not in areasCount:
+                        if t == "US":
+                            areasCount["美国"] += 1
+                        elif t == "UK":
+                            areasCount["英国"] += 1
+                        else:
+                            continue
                     else:
-                        continue
-                else:
-                    areasCount[t] += 1
-        lists = sorted(areasCount.items(), key=lambda x: x[1], reverse=True)
-        areas = []
-        values = []
-        for i in lists[:5]:
-            areas.append(i[0])
-            values.append(i[1])
-        plt.figure("豆瓣分析")
-        top5 = plt.bar(x=areas, height=values)
-        for i in top5:
-            plt.text(x=i.get_x()+0.35, y=i.get_height()+0.1, s=i.get_height())
-        plt.ylim(0, len(movies))
-        plt.title("电影数量最多的区域TOP 5")
-        plt.show()
+                        areasCount[t] += 1
+            lists = sorted(areasCount.items(), key=lambda x: x[1],
+                           reverse=True)
+            areas = []
+            values = []
+            for i in lists[:5]:
+                areas.append(i[0])
+                values.append(i[1])
+            plt.figure("豆瓣分析")
+            top5 = plt.bar(x=areas, height=values)
+            for i in top5:
+                plt.text(x=i.get_x()+0.35, y=i.get_height()+0.1,
+                         s=i.get_height())
+            plt.ylim(0, len(movies))
+            plt.title("电影数量最多的区域TOP 5")
+            plt.show()
+        except Exception as e:
+            print("areasDestribution：" + repr(e))
 
     @staticmethod
     def timeDistribution(movies):
@@ -196,15 +214,18 @@ class Distribution():
                  movies:所有电影
         #### 返回：None
         """
-        timeList = [i.time for i in movies]
-        minTime = min(movies, key=lambda x: x.time).time
-        maxTime = max(movies, key=lambda x: x.time).time
-        plt.figure("豆瓣分析")
-        plt.title("电影时间长度直方图")
-        plt.xlabel("电影时间（分钟）")
-        plt.ylabel("电影数量（部）")
-        plt.hist(x=timeList, bins=maxTime-minTime+1, edgecolor="black")
-        plt.show()
+        try:
+            timeList = [i.time for i in movies]
+            minTime = min(movies, key=lambda x: x.time).time
+            maxTime = max(movies, key=lambda x: x.time).time
+            plt.figure("豆瓣分析")
+            plt.title("电影时间长度直方图")
+            plt.xlabel("电影时间（分钟）")
+            plt.ylabel("电影数量（部）")
+            plt.hist(x=timeList, bins=maxTime-minTime+1, edgecolor="black")
+            plt.show()
+        except Exception as e:
+            print("timeDistribution：" + repr(e))
 
     @staticmethod
     def begin(movies):
@@ -222,6 +243,7 @@ class Distribution():
                       Distribution.timeDistribution]
         for i in destribute:
             p = Process(target=i, args=(movies,))
+            p.daemon = True
             p.start()
             pList.append(p)
         for i in pList:

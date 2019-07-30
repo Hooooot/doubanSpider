@@ -1,7 +1,6 @@
 import re
 from multiprocessing import Process, Queue
 from threading import Lock, Thread
-
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
@@ -52,19 +51,21 @@ class Movie:
 
 
 class Spider:
-    def __init__(self, params, amount, status):
+    def __init__(self, params, amount, status=None):
         """
         #### Spider(params, amount)
         #### 参数：
                  params:爬虫的请求参数
                  amount:需要爬取的电影数量
+                 status:若为单线程运行，则为主窗口状态栏，可以通过emit()显示信息
+                        否则为None，无意义
         """
         self.url = "https://movie.douban.com/j/new_search_subjects"
         # 任务总数
         self.amount = amount
         # 爬虫请求参数
         self.params = params
-        # 主窗口状态栏
+        # 单线程运行时，是主窗口状态栏，如果开启并发，则始终为None
         self.status = status
         self.head = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/\
@@ -102,10 +103,11 @@ class Spider:
                            args=(self.amount-left, left), name="left")
                 t.start()
                 t.join()
-                self.status.emit("正在获取电影链接：（%d/%d）" % (20, self.amount))
+                # self.status.emit("正在获取电影链接：（%d/%d）" % (20, self.amount))
             for i, t in enumerate(threadList):
                 t.join()
-                self.status.emit("正在获取电影链接：（%d/%d）" % ((i+1)*20, self.amount))
+                # self.status.emit("正在获取电影链接：（%d/%d）" %
+                #                  ((i+1)*20, self.amount))
         else:
             # 不使用多线程
             for i in range(need):
@@ -157,36 +159,46 @@ class Spider:
         urls = np.array(self.movieUrls)
         runningSize = Queue()
         length = len(urls)
+        need = length // 8
+        left = length % 8
         processList = []
-        if length % 8 == 0:
-            urls = urls.reshape(8, -1)
-            for n in urls:
+        if left == 0 or need == 0:
+            if left == 0:
+                urls = urls.reshape(8, -1)
+                for n in urls:
+                    p = Process(target=self.GetMovieInfosProcess,
+                                args=(n, self.queue, runningSize, True))
+                    p.daemon = True
+                    processList.append(p)
+                    runningSize.put(p.pid)
+                    p.start()
+            else:
                 p = Process(target=self.GetMovieInfosProcess,
-                            args=(n, self.queue, runningSize))
+                            args=(urls, self.queue, runningSize, True))
+                p.daemon = True
                 processList.append(p)
                 runningSize.put(p.pid)
                 p.start()
         else:
-            need = length // 8
-            left = length % 8
             n_urls = urls[:-left]
             n_urls.resize(8, need)
             l_urls = urls[-left:]
             for n in n_urls:
                 p = Process(target=self.GetMovieInfosProcess,
-                            args=(n, self.queue, runningSize))
+                            args=(n, self.queue, runningSize, True))
                 processList.append(p)
                 runningSize.put(p.pid)
                 p.start()
             p_l = Process(target=self.GetMovieInfosProcess,
-                          args=(l_urls, self.queue, runningSize))
+                          args=(l_urls, self.queue, runningSize, True))
             runningSize.put(p_l.pid)
+            p_l.daemon = True
             p_l.start()
-        count = 1
+        # count = 1
         while not runningSize.empty() or not self.queue.empty():
             self.movies.append(self.queue.get())
-            self.status.emit("正在获取电影详细信息：（%d/%d）" % (count, self.amount))
-            count += 1
+            # self.status.emit("正在获取电影详细信息：（%d/%d）" % (count, self.amount))
+            # count += 1
 
     def GetMovieInfosProcess(self, movieUrls, queue=None,
                              runningSize=None, multiProcess=False):
@@ -200,55 +212,60 @@ class Spider:
         #### 返回：None
         """
         for i, movieUrl in enumerate(movieUrls):
-            page = requests.get(movieUrl, headers=self.head, timeout=10)
-            html = BeautifulSoup(page.text, "html.parser")
-            name = html.find("span", property="v:itemreviewed")
-            if name is None:
-                print("name为空：" + movieUrl)
-                continue
-            else:
-                name = name.text
-            stars = html.find("strong", class_="ll rating_num").text
-            v = html.find("span", property="v:votes")
-            if v is None:
-                votes = "0"
-                stars = "0"
-            else:
-                votes = v.text
-            t = html.find_all("span", property="v:genre")
-            types = [i.text for i in t]
-            info = html.find("div", id="info")
-            a = re.search(r"制片国家/地区: (.*)", info.text)
-            if a is None:
-                print("制片国家/地区问题" + movieUrl)
-                continue
-            else:
-                a = a.group(1)
-            areas = a.split(" / ")
-            ti = html.find("span", property="v:runtime")
-            if ti is None:
-                tim = re.search(r"片长: ([0-9]*).*", info.text)
-                if tim is None:
-                    time = "0"
+            try:
+                page = requests.get(movieUrl, headers=self.head, timeout=5)
+                html = BeautifulSoup(page.text, "html.parser")
+                name = html.find("span", property="v:itemreviewed")
+                if name is None:
+                    print("name为空：" + movieUrl)
+                    continue
                 else:
-                    time = tim.group(1)
-            else:
-                time = ti["content"]
-            y = html.find("span", class_="year")
-            if y is not None:
-                y = y.text
-            else:
-                y = re.search(r"上映日期: ([0-9]{4}).*", info.text).group(1)
-            year = y.lstrip("(").rstrip(")")
-            r = html.find_all("span", class_="rating_per")
-            rating = [i.text for i in r]  # 5星开始 54321
-            movie = Movie(name, stars, votes,
-                          rating, areas, year, types, time, movieUrl)
-            if multiProcess:
-                queue.put(movie)
-            else:
-                self.status.emit("正在获取电影详细信息：（%d/%d）" % (i+1, self.amount))
-                self.movies.append(movie)
+                    name = name.text
+                stars = html.find("strong", class_="ll rating_num").text
+                v = html.find("span", property="v:votes")
+                if v is None:
+                    votes = "0"
+                    stars = "0"
+                else:
+                    votes = v.text
+                t = html.find_all("span", property="v:genre")
+                types = [i.text for i in t]
+                info = html.find("div", id="info")
+                a = re.search(r"制片国家/地区: (.*)", info.text)
+                if a is None:
+                    print("制片国家/地区问题" + movieUrl)
+                    continue
+                else:
+                    a = a.group(1)
+                areas = a.split(" / ")
+                ti = html.find("span", property="v:runtime")
+                if ti is None:
+                    tim = re.search(r"片长: ([0-9]*).*", info.text)
+                    if tim is None:
+                        time = "0"
+                    else:
+                        time = tim.group(1)
+                else:
+                    time = ti["content"]
+                y = html.find("span", class_="year")
+                if y is not None:
+                    y = y.text
+                else:
+                    y = re.search(r"上映日期: ([0-9]{4}).*", info.text).group(1)
+                year = y.lstrip("(").rstrip(")")
+                r = html.find_all("span", class_="rating_per")
+                rating = [i.text for i in r]  # 5星开始 54321
+                movie = Movie(name, stars, votes,
+                              rating, areas, year, types, time, movieUrl)
+                if multiProcess:
+                    queue.put(movie)
+                else:
+                    self.status.emit("正在获取电影详细信息：（%d/%d）" % (i+1, self.amount))
+                    self.movies.append(movie)
+            except Exception as e:
+                print(movieUrl + "  " + repr(e))
+        if multiProcess:
+            runningSize.get()
 
     @staticmethod
     def begin(params, amount, status, concurrent=False):
@@ -261,13 +278,20 @@ class Spider:
                  concurrent:是否并发执行，默认否，此时GetMovies()和GetMovieInfos()都将使用单线(进)程执行
         #### 返回：已爬完的爬虫(douban.Spider)实例
         """
-        spider = Spider(params, amount, status)
+        if concurrent:
+            spider = Spider(params, amount, None)
+        else:
+            spider = Spider(params, amount, status)
         status.emit("正在获取电影链接......")
         spider.GetMovies(concurrent)
         status.emit("正在获取电影详细信息......")
         spider.GetMovieInfos(concurrent)
         status.emit("已完成！")
         return spider
+
+
+# def show(s):
+#     print(s)
 
 
 # if __name__ == "__main__":
@@ -280,7 +304,5 @@ class Spider:
 #             "countries": "中国大陆",
 #             "year_range": "2000,2009"
 #         }
-#     spider = Spider.begin(params, 200)
-#     with open("dump.dat", "wb") as f:
-#         pickle.dump(spider.movies, f)
-#     spider.handleData()
+#     spider = Spider.begin(params, 2, "None", True)
+#     print(spider.movies)
