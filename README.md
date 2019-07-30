@@ -39,5 +39,5 @@
 &nbsp;&nbsp;douban.py：豆瓣爬虫，用于获取电影信息<br/>
 &nbsp;&nbsp;distribution.py：用于分析电影数据<br/>
 &nbsp;&nbsp;dump.dat：电影信息序列化文件（仅调试时用）<br/>
-&nbsp;&nbsp;test.py：调试时用于测试UI界面功能
+&nbsp;&nbsp;test.py：调试时用于测试UI功能
     
