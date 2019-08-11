@@ -2,12 +2,12 @@ import pickle
 import sys
 import time
 
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtGui import QIntValidator, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
-                             QGridLayout, QLabel, QLineEdit, QMainWindow,
-                             QMenu, QMenuBar, QMessageBox, QPushButton,
-                             QTableView, QWidget, QDialog, QProgressBar)
+                             QDialog, QGridLayout, QLabel, QLineEdit,
+                             QMainWindow, QMenu, QMenuBar, QMessageBox,
+                             QProgressBar, QPushButton, QTableView, QWidget)
 
 from douban import Movie
 
@@ -18,22 +18,15 @@ def readData():
     return movies
 
 
+movies = readData()
+
+
 class TimerThread(QThread):
     def __init__(self, parent=None):
         return super().__init__(parent=parent)
 
     def run(self):
         pass
-
-
-class TableWindow(QThread):
-    def __init__(self):
-        super(TableWindow, self).__init__()
-
-    def run(self):
-        tableWidget = TableWidget()
-        tableWidget.show()
-        time.sleep(1)
 
 
 class MainWindow(QMainWindow):
@@ -135,14 +128,13 @@ class MainWindow(QMainWindow):
         # self.tableThread = TableWindow()
         # self.tableThread.start()
 
-        if not self.showAllDataCheck.isChecked():
-            self.tableWindow = TableWidget()
+        if self.showAllDataCheck.isChecked():
+            self.tableWindow = TableWidget(movies)
             self.tableWindow.show()
         self.status.showMessage("正在获取电影详细信息：（200/200）")
         self.usedTimeM = 0
         self.usedTimeS = 0
         self.timer.start(1000)
-        self.showAllDataCheck.setCheckable(False)
 
     def about(self, qAction):
         self.aboutWindow = About()
@@ -154,10 +146,16 @@ class MainWindow(QMainWindow):
 
 
 class TableWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, movieList, parent=None):
+        """
+        TableWidget(movieList, parent=None)
+        #### 参数：
+                    movieList:电影(douban.Movie)列表
+                    parent:指定父窗口，默认无
+        """
         super(TableWidget, self).__init__(parent)
         self.table = QTableView(self)
-        self.movieList = readData()
+        self.movieList = movieList
         self.initUI()
 
     def initUI(self):
@@ -183,14 +181,17 @@ class TableWidget(QWidget):
         self.table.setColumnWidth(6, 125)
         self.table.setColumnWidth(7, 75)
         self.table.setColumnWidth(8, 150)
+        self.table.setColumnWidth(9, 75)
         for row, movie in enumerate(self.movieList):
             for column in range(9):
                 item = QStandardItem(movie[column])
                 item.setTextAlignment(Qt.AlignCenter)
                 model.setItem(row, column, item)
-            delete = QPushButton("删除", self)
-            delete.setProperty("row", row)
-            delete.clicked.connect(self.deleteClicked)
+            delete = QLabel(self)
+            delete.setText("<a style='color:DimGray;' \
+                href='" + movie.url + "'>查看评论</a>")
+            delete.setAlignment(Qt.AlignCenter)
+            delete.setOpenExternalLinks(True)
             self.table.setIndexWidget(model.index(row, 9), delete)
 
     def deleteClicked(self):

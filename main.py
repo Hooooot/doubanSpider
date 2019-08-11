@@ -4,11 +4,12 @@ import time
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QIntValidator, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import (
-    QAction, QApplication, QCheckBox, QComboBox, QDialog, QGridLayout, QLabel,
+    QAction, QApplication, QCheckBox, QComboBox, QGridLayout, QLabel,
     QLineEdit, QMainWindow, QMessageBox, QPushButton, QTableView, QWidget)
 
-from distribution import Distribution
-from douban import Movie, Spider
+from analysis import Analysis
+from douban import Spider
+from about import About
 
 
 class SpiderThread(QThread):
@@ -40,18 +41,18 @@ threadFinish, concurrent=None)
         print("已爬完")
 
 
-class DistributionThread(QThread):
+class AnalysisThread(QThread):
     def __init__(self, movieList):
         """
-        DistributionThread(movieList)
+        AnalysisThread(movieList)
         #### 参数：
                  movieList:电影(douban.Movie)列表
         """
-        super(DistributionThread, self).__init__()
+        super(AnalysisThread, self).__init__()
         self.movieList = movieList
 
     def run(self):
-        Distribution.begin(self.movieList)
+        Analysis.begin(self.movieList)
 
 
 class TableWidget(QWidget):
@@ -100,26 +101,18 @@ class TableWidget(QWidget):
         self.table.setColumnWidth(6, 125)
         self.table.setColumnWidth(7, 75)
         self.table.setColumnWidth(8, 150)
+        self.table.setColumnWidth(9, 75)
         for row, movie in enumerate(self.movieList):
             for column in range(9):
                 item = QStandardItem(movie[column])
                 item.setTextAlignment(Qt.AlignCenter)
                 model.setItem(row, column, item)
-            delete = QPushButton("删除", self)
-            delete.setProperty("row", row)
-            delete.clicked.connect(self.deleteClicked)
-            self.table.setIndexWidget(model.index(row, 9), delete)
-
-    def deleteClicked(self):
-        """
-        #### 功能：响应删除按钮，删除对应行的电影信息
-        #### 参数：None
-        #### 返回：None
-        """
-        sender = self.sender()
-        row = sender.property("row")
-        del self.movieList[row]
-        self.handleData()
+            viewDetail = QLabel(self)
+            viewDetail.setText("<a style='color:DimGray;' \
+                href='" + movie.url + "'>查看详细</a>")
+            viewDetail.setAlignment(Qt.AlignCenter)
+            viewDetail.setOpenExternalLinks(True)
+            self.table.setIndexWidget(model.index(row, 9), viewDetail)
 
 
 class MainWindow(QMainWindow):
@@ -148,7 +141,7 @@ class MainWindow(QMainWindow):
         # 爬虫线程，用于运行爬虫
         self.spiderThread = None
         # 数据分析线程，用于显示数据分析结果
-        self.distributionThread = None
+        self.AnalysisThread = None
         # 状态栏
         self.status = self.statusBar()
         # 菜单
@@ -312,8 +305,8 @@ class MainWindow(QMainWindow):
         self.btn.setToolTip("点击开始爬取")
         self.amount.setReadOnly(False)
         self.amount.setStyleSheet("QLineEdit{background-color: white;}")
-        self.distributionThread = DistributionThread(movieList)
-        self.distributionThread.start()
+        self.AnalysisThread = AnalysisThread(movieList)
+        self.AnalysisThread.start()
         if self.showAllDataCheck.isChecked():
             self.tableWindow = TableWidget(movieList)
             self.tableWindow.show()
@@ -361,41 +354,6 @@ class MainWindow(QMainWindow):
                 self.concurrent = check
             else:
                 sender.setChecked(False)
-
-
-class About(QDialog):
-    """
-    关于界面
-    """
-    def __init__(self, parent=None, flags=Qt.WindowFlags()):
-        super().__init__(parent=parent, flags=flags)
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle("关于")
-        self.resize(100, 200)
-        gridLayout = QGridLayout()
-        tips = QLabel("说明：", self)
-        tipsText = QLabel("&nbsp;&nbsp;&nbsp;多线（进）程运行可能会<br/>\
-&nbsp;导致程序不稳定，建议数据量<br/>&nbsp;不大时不要打开。", self)
-        edition = QLabel("版本：1.1.0 released 2019-7-30", self)
-        url = QLabel(self)
-        url.setOpenExternalLinks(True)
-        url.setText("<a style='color:DeepSkyBlue;' \
-href='https://github.com/Hooooot/doubanSpider'>项目地址</a>")
-        GPLLicense = QLabel(self)
-        GPLLicense.setOpenExternalLinks(True)
-        GPLLicense.setText("<a style='color:DeepSkyBlue;' \
-href='https://github.com/Hooooot/doubanSpider/blob/master/LICENSE'>MIT许可证</a>")
-        right = QLabel("Copyright (c) 2019 Hooooot", self)
-
-        gridLayout.addWidget(tips, 1, 1)
-        gridLayout.addWidget(tipsText, 2, 1)
-        gridLayout.addWidget(url, 3, 1)
-        gridLayout.addWidget(GPLLicense, 3, 2)
-        gridLayout.addWidget(edition, 4, 1)
-        gridLayout.addWidget(right, 5, 1)
-        self.setLayout(gridLayout)
 
 
 if __name__ == "__main__":
