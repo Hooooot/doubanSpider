@@ -42,7 +42,7 @@
 > 文件说明： <br/>
 &nbsp;&nbsp;main.py：程序主窗口文件，程序入口<br/>
 &nbsp;&nbsp;douban.py：豆瓣爬虫，用于获取电影信息<br/>
-&nbsp;&nbsp;distribution.py：豆瓣爬虫，用于获取电影信息（1.2.0更名为analysis.py）br/>
+&nbsp;&nbsp;distribution.py：豆瓣爬虫，用于获取电影信息（1.2.0更名为analysis.py）<br/>
 &nbsp;&nbsp;analysis.py：用于分析电影数据<br/>
 &nbsp;&nbsp;about.py：关于界面（1.2.0添加）<br/>
 &nbsp;&nbsp;dump.dat：电影信息序列化文件（仅调试时用）<br/>
