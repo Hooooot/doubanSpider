@@ -5,6 +5,8 @@
 > 功能：抓取豆瓣电影各分类评分前N部，并分析电影所属区域、电影时间长度、电影最多评论、最高评分、电影年代分布、电影类型分布等信息
 
 ### 版本说明：
+#### V1.2.2(2019.8.18):
+> 不再显示控制台，直接以窗口形式运行
 #### V1.2.0(2019.8.10)：
 > 将“关于”界面分离，修改文件目录，优化界面
 
@@ -31,18 +33,20 @@
 
 ## 目录
 - 
-    - main.py
+    - <s>main.py(1.2.2更名为main.py)</s>
+    - main.pyw(1.2.2添加)
     - douban.py
-    - distribution.py(1.2.0更名为analysis.py)
+    - <s>distribution.py(1.2.0更名为analysis.py)</s>
     - analysis.py(1.2.0添加)
     - about.py(1.2.0添加)
     - dump.dat
     - test.py
     - README.md
 > 文件说明： <br/>
-&nbsp;&nbsp;main.py：程序主窗口文件，程序入口<br/>
+&nbsp;&nbsp;<s>main.py：程序主窗口文件，程序入口(1.2.2更名为main.py)</s><br/>
+&nbsp;&nbsp;main.pyw：程序主窗口文件，程序入口(1.2.2添加)<br/>
 &nbsp;&nbsp;douban.py：豆瓣爬虫，用于获取电影信息<br/>
-&nbsp;&nbsp;distribution.py：用于分析电影数据（1.2.0更名为analysis.py）<br/>
+&nbsp;&nbsp;<s>distribution.py：豆瓣爬虫，用于获取电影信息（1.2.0更名为analysis.py）</s><br/>
 &nbsp;&nbsp;analysis.py：用于分析电影数据<br/>
 &nbsp;&nbsp;about.py：关于界面（1.2.0添加）<br/>
 &nbsp;&nbsp;dump.dat：电影信息序列化文件（仅调试时用）<br/>
